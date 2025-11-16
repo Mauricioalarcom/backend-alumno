@@ -1,189 +1,175 @@
-# Sistema de Reportes de Incidentes - Backend
+# 🚨 Sistema de Incidentes UTEC - Backend
 
-Backend serverless para sistema de reportes de incidentes usando AWS Lambda, API Gateway y DynamoDB.
+Backend serverless para el sistema de reportes de incidentes de UTEC.
 
-## Características
+## ✅ Características Principales
 
-- 🚀 **Serverless**: Desplegado en AWS Lambda con API Gateway
-- 📊 **Base de datos**: DynamoDB para almacenamiento escalable
-- 🔐 **Autenticación**: JWT con diferenciación de roles (usuario/admin)
-- 📸 **Gestión de fotos**: Subida y almacenamiento en S3
-- 🔒 **Seguridad**: Validación de datos con Joi
-- 📈 **Escalabilidad**: Arquitectura completamente serverless
+### 🔐 Autenticación Restrictiva
+- **Solo acepta emails @utec.edu.pe**
+- Login con JWT (válido 24h)
 
-## Estructura del Proyecto
+### 📋 Gestión de Incidentes
+- Crear incidentes con validación automática de nivel de riesgo
+- Listar todos los incidentes
+- Ver incidente por ID
 
-```
-src/
-├── handlers/          # Funciones Lambda
-│   ├── incidents.js   # CRUD de incidentes
-│   ├── admin.js       # Funciones administrativas
-│   ├── auth.js        # Autenticación y autorización
-│   └── photos.js      # Gestión de fotos
-├── models/            # Modelos de datos
-│   ├── Incident.js    # Modelo de incidentes
-│   └── User.js        # Modelo de usuarios
-├── schemas/           # Validaciones
-│   └── validation.js  # Esquemas Joi
-└── utils/             # Utilidades
-    ├── response.js    # Helpers para respuestas HTTP
-    └── auth.js        # Helpers de autenticación
+## 🚀 Despliegue en AWS
+
+### Comando Simple:
+```bash
+serverless deploy
 ```
 
-## Modelo de Datos
+O especificar stage:
+```bash
+serverless deploy --stage prod
+```
 
-### Incidentes
-```javascript
+Esto creará:
+- ✅ 5 Lambda Functions
+- ✅ 2 Tablas DynamoDB
+- ✅ API Gateway con endpoints HTTP
+
+## 📡 Endpoints
+
+### 1. Registrar Usuario
+```
+POST /auth/register
+```
+**Body:**
+```json
 {
-  id: string,                    // UUID generado automáticamente
-  titulo: string,                // Título del incidente
-  descripcion: string,           // Descripción detallada
-  tipo: string,                  // Tipo de incidente
-  piso: string,                  // Piso donde ocurrió
-  lugar_especifico: string,      // Ubicación específica
-  foto: string,                  // URL de la foto (opcional)
-  
-  // Campos manejados por el sistema
-  nivel_riesgo: string,          // bajo, medio, alto, critico
-  fecha_creacion: string,        // ISO timestamp
-  estado: string,                // pendiente, en_proceso, resuelto, cerrado
-  veces_reportado: number,       // Contador de reportes
-  usuario_reporto: string,       // Email del usuario que reportó
-  admin_actualizo: string,       // Email del admin que actualizó (opcional)
-  comentario_admin: string       // Comentario del administrador (opcional)
+  "nombre": "Juan Pérez",
+  "email": "juan.perez@utec.edu.pe",
+  "password": "mipassword123"
 }
 ```
 
-### Usuarios
-```javascript
+⚠️ **Importante**: Solo emails `@utec.edu.pe` son aceptados
+
+### 2. Login
+```
+POST /auth/login
+```
+**Body:**
+```json
 {
-  email: string,                 // Email (clave primaria)
-  password: string,              // Hash de la contraseña
-  nombre: string,                // Nombre completo
-  tipo_usuario: string,          // usuario, admin
-  fecha_registro: string,        // ISO timestamp
-  activo: boolean,               // Estado de la cuenta
-  ultimo_login: string           // ISO timestamp
+  "email": "juan.perez@utec.edu.pe",
+  "password": "mipassword123"
 }
 ```
 
-## API Endpoints
+### 3. Crear Incidente (requiere token)
+```
+POST /incidents
+Authorization: Bearer {token}
+```
+**Body:**
+```json
+{
+  "titulo": "Fuga de agua",
+  "descripcion": "Hay una fuga en el baño",
+  "tipo": "infraestructura",
+  "piso": 2,
+  "lugar_especifico": "Baño del ala norte",
+  "foto": "base64_string_opcional"
+}
+```
 
-### Autenticación
-- `POST /auth/register` - Registrar usuario
-- `POST /auth/login` - Iniciar sesión
-- `GET /auth/profile` - Obtener perfil (requiere auth)
+**Tipos permitidos:**
+- `seguridad` → Riesgo: ALTO
+- `infraestructura` → Riesgo: ALTO
+- `limpieza` → Riesgo: MEDIO
+- `equipamiento` → Riesgo: MEDIO
+- `otro` → Riesgo: BAJO
 
-### Incidentes
-- `POST /incidents` - Crear incidente (requiere auth)
-- `GET /incidents` - Listar incidentes (requiere auth)
-- `GET /incidents/{id}` - Obtener incidente específico
-- `PUT /incidents/{id}` - Actualizar incidente (requiere auth)
-- `DELETE /incidents/{id}` - Eliminar incidente (solo admin)
+### 4. Listar Incidentes (requiere token)
+```
+GET /incidents
+Authorization: Bearer {token}
+```
 
-### Administración
-- `PATCH /admin/incidents/{id}/status` - Actualizar estado (solo admin)
-- `GET /admin/incidents/pending` - Incidentes pendientes (solo admin)
-- `GET /admin/incidents/stats` - Estadísticas (solo admin)
+### 5. Ver Incidente (requiere token)
+```
+GET /incidents/{id}
+Authorization: Bearer {token}
+```
 
-### Fotos
-- `POST /photos/upload` - Subir foto (requiere auth)
-- `GET /photos/{fileName}` - Obtener URL firmada (requiere auth)
-- `DELETE /photos/{fileName}` - Eliminar foto (requiere auth)
+## 🛠️ Configuración
 
-## Instalación y Configuración
+### Variables de Entorno (.env)
+```
+JWT_SECRET=utec-secret-2024
+AWS_REGION=us-east-1
+```
 
-### Prerrequisitos
-- Node.js 18+
-- AWS CLI configurado
-- Serverless Framework
+### Organización y Rol IAM
+Configurado en `serverless.yml`:
+- **Org**: diegoalarconm
+- **IAM Role**: arn:aws:iam::520247722169:role/LabRole
 
-### Instalación
+## 📦 Recursos AWS Creados
+
+### Lambda Functions:
+- `register` - Registro de usuarios
+- `login` - Autenticación
+- `createIncident` - Crear incidente
+- `listIncidents` - Listar incidentes
+- `getIncident` - Ver incidente
+
+### DynamoDB Tables:
+- `{stage}-utec-users` - Usuarios
+- `{stage}-utec-incidents` - Incidentes
+
+## 🎯 Flujo Completo
+
+1. **Registrar** con email @utec.edu.pe
+2. **Login** para obtener token
+3. **Crear incidentes** con el token
+4. El sistema automáticamente:
+   - Calcula el nivel de riesgo
+   - Asigna fecha de creación
+   - Marca estado como "pendiente"
+   - Cuenta veces reportado
+
+## 📝 Ejemplo de Uso
+
+```bash
+# 1. Registrar
+curl -X POST https://API_URL/auth/register \
+  -H "Content-Type: application/json" \
+  -d '{"nombre":"Juan Pérez","email":"juan.perez@utec.edu.pe","password":"pass123"}'
+
+# 2. Login
+curl -X POST https://API_URL/auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"email":"juan.perez@utec.edu.pe","password":"pass123"}'
+
+# 3. Crear Incidente
+curl -X POST https://API_URL/incidents \
+  -H "Authorization: Bearer TOKEN_AQUI" \
+  -H "Content-Type: application/json" \
+  -d '{"titulo":"Problema","descripcion":"Desc","tipo":"seguridad","piso":1,"lugar_especifico":"Lab A"}'
+```
+
+## 🔧 Comandos Útiles
+
+```bash
+# Ver logs
+serverless logs -f register --tail
+
+# Eliminar deployment
+serverless remove
+
+# Info del deployment
+serverless info
+```
+
+## ✨ Listo para Usar
+
 ```bash
 npm install
+serverless deploy
 ```
 
-### Configuración
-1. Copiar `.env.example` a `.env` y configurar variables
-2. Configurar AWS credentials
-3. Modificar `serverless.yml` según necesidades
-
-### Desarrollo Local
-```bash
-npm run local
-```
-
-### Despliegue
-```bash
-# Desarrollo
-npm run deploy-dev
-
-# Producción
-npm run deploy-prod
-```
-
-## Roles y Permisos
-
-### Usuario Normal
-- Crear incidentes
-- Ver sus propios incidentes
-- Actualizar sus propios incidentes
-- Subir fotos
-
-### Administrador
-- Todas las funciones de usuario normal
-- Ver todos los incidentes
-- Actualizar estado y nivel de riesgo
-- Ver estadísticas
-- Eliminar incidentes y fotos
-
-## Tipos de Incidentes
-
-- `mantenimiento` - Problemas de mantenimiento
-- `seguridad` - Problemas de seguridad
-- `limpieza` - Problemas de limpieza
-- `infraestructura` - Problemas de infraestructura
-- `tecnologia` - Problemas tecnológicos
-- `otros` - Otros tipos de incidentes
-
-## Estados de Incidentes
-
-- `pendiente` - Recién reportado, esperando revisión
-- `en_proceso` - En proceso de resolución
-- `resuelto` - Problema resuelto
-- `cerrado` - Incidente cerrado
-
-## Niveles de Riesgo
-
-- `bajo` - Riesgo bajo
-- `medio` - Riesgo medio (por defecto)
-- `alto` - Riesgo alto
-- `critico` - Riesgo crítico
-
-## Seguridad
-
-- Autenticación JWT con expiración de 24 horas
-- Validación de datos con Joi
-- Autorización basada en roles
-- CORS configurado
-- Encriptación de contraseñas con bcrypt
-- URLs firmadas para acceso a fotos
-
-## Monitoreo y Logs
-
-- CloudWatch Logs automático
-- Métricas de API Gateway
-- Monitoreo de DynamoDB
-- Alertas configurables
-
-## Contribución
-
-1. Fork el proyecto
-2. Crear branch de feature (`git checkout -b feature/AmazingFeature`)
-3. Commit cambios (`git commit -m 'Add some AmazingFeature'`)
-4. Push al branch (`git push origin feature/AmazingFeature`)
-5. Abrir Pull Request
-
-## Licencia
-
-Este proyecto está bajo la Licencia MIT.# backend-alumno
+¡Tu API estará lista en AWS!
